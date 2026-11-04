@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>City Grow: practice assessment</title>
+<style>
+/* ==========================================================================
+   Look and feel: dark navy, Okabe-Ito accents. Liveability is orange,
+   Technology is sky blue; every building also has its own icon.
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+  --bg: #0a1433;
+  --bg-deep: #070f28;
+  --panel: #13214d;
+  --panel-hi: #1a2c62;
+  --line: rgba(222, 232, 255, 0.14);
+  --text: #eef2fb;
+  --muted: #a3b2d8;
+  --live: #E69F00;
+  --tech: #56B4E9;
+  --yellow: #F0E442;
+  --green: #009E73;
+  --pink: #CC79A7;
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --font: ui-rounded, "SF Pro Rounded", "Nunito", "Varela Round", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: radial-gradient(120% 70% at 50% 0%, #11204d 0%, var(--bg) 55%, var(--bg-deep) 100%) fixed;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+#app {
+  max-width: 1180px; margin: 0 auto;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 12px calc(16px + env(safe-area-inset-bottom, 0px));
+}
+.screen.hidden { display: none; }
+
+/* ---------- Intro ---------- */
+#screen-intro { min-height: calc(100dvh - 30px); display: grid; place-items: center; }
+.intro-card {
+  width: 100%; max-width: 600px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 28px 24px;
+}
+.brand { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 700; margin: 0 0 18px; }
+.brand svg { width: 28px; height: 28px; }
+.intro-card h1 { font-size: 2.4rem; line-height: 1.05; margin: 0 0 8px; letter-spacing: -0.02em; }
+.intro-card h2 { font-size: 1.05rem; margin: 20px 0 6px; }
+.intro-card p { margin: 0 0 8px; color: var(--muted); }
+.howto { margin: 0 0 22px; padding: 0; list-style: none; }
+.howto li { margin: 0 0 8px; padding-left: 26px; position: relative; }
+.howto li::before { content: ""; position: absolute; left: 4px; top: 0.5em; width: 10px; height: 10px; border-radius: 3px; background: var(--live); }
+.howto li:nth-child(even)::before { background: var(--tech); border-radius: 50%; }
+.fine { font-size: 0.85rem; margin-top: 14px !important; }
+.btn {
+  min-height: 52px; padding: 0 26px; border-radius: 999px; border: 0; cursor: pointer;
+  font-weight: 700; font-size: 1.05rem; touch-action: manipulation;
+}
+.btn.primary { background: var(--tech); color: #06122e; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.quiet { background: transparent; border: 1px solid var(--line); min-height: 44px; font-size: 0.95rem; }
+.btn.small { min-height: 40px; padding: 0 16px; font-size: 0.92rem; }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* ---------- HUD ---------- */
+.hud {
+  position: sticky; top: 0; z-index: 50; margin: 0 0 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+  padding: 10px 14px; border-radius: 18px; border: 1px solid var(--line);
+  background: rgba(10, 20, 51, 0.93); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.hud-item { display: flex; flex-direction: column; min-width: 0; }
+.hud-item small { color: var(--muted); font-size: 0.75rem; }
+.hud-item b { font-variant-numeric: tabular-nums; font-size: 1.02rem; white-space: nowrap; }
+.hud-item.warn b { color: var(--pink); }
+.month-bar { height: 4px; width: 70px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin-top: 3px; }
+.month-bar i { display: block; height: 100%; width: 0; background: var(--yellow); }
+.hud-spacer { flex: 1 1 auto; }
+.hud-btn {
+  min-height: 42px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--panel); font-weight: 700; cursor: pointer; touch-action: manipulation;
+}
+.hud-btn.finish { background: var(--yellow); color: #06122e; border-color: transparent; }
+
+/* ---------- Layout ---------- */
+.layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px; }
+.card h2 { font-size: 1.05rem; margin: 0 0 10px; }
+@media (max-width: 900px) {
+  .layout { display: flex; flex-direction: column; }
+  .col { display: contents; }
+  .sec-metrics { order: 1; } .sec-alerts { order: 2; } .sec-map { order: 3; } .sec-panel { order: 4; } .sec-tasks { order: 5; }
+  .hud { gap: 6px 12px; padding: 8px 10px; }
+  .hud-item b { font-size: 0.95rem; }
+}
+
+/* ---------- Metrics ---------- */
+.headline { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+.big-bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: 104px 1fr 40px; gap: 8px; align-items: center; }
+.bar-row span { font-weight: 700; }
+.bar-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.bar { height: 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+.bar.live i { background: var(--live); }
+.bar.tech i { background: var(--tech); }
+.ci { text-align: center; min-width: 120px; }
+.ci svg { width: 120px; height: 52px; display: block; }
+.ci b { display: block; font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ci small { color: var(--muted); }
+.subs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-top: 14px; }
+.sub { display: grid; grid-template-columns: 1fr 34px; gap: 2px 6px; font-size: 0.82rem; color: var(--muted); }
+.sub b { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+.sub .bar { grid-column: 1 / -1; height: 6px; }
+
+/* ---------- Map ---------- */
+.sec-map { position: relative; }
+.map { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.district { background: rgba(7, 15, 40, 0.45); border: 1px solid var(--line); border-radius: 16px; padding: 8px; }
+.district h3 { margin: 0 0 6px 4px; font-size: 0.85rem; color: var(--muted); font-weight: 700; }
+.plots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.plot {
+  position: relative; aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent;
+  background: rgba(222, 232, 255, 0.06); display: grid; place-items: center; padding: 0;
+  cursor: pointer; touch-action: manipulation; transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.plot:hover { background: rgba(222, 232, 255, 0.11); }
+.plot svg { width: 58%; height: 58%; }
+.plot.live { background: rgba(230, 159, 0, 0.16); color: var(--live); }
+.plot.tech { background: rgba(86, 180, 233, 0.16); color: var(--tech); }
+.plot.power { background: rgba(163, 178, 216, 0.14); color: #c4cde6; }
+.plot.water { background: repeating-linear-gradient(160deg, #12386a 0 7px, #10305c 7px 14px); cursor: default; }
+.plot.sel { border-color: var(--yellow); }
+.plot .badge { position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; }
+.plot .badge svg { width: 11px; height: 11px; }
+.plot .badge.smart { background: var(--yellow); color: #06122e; }
+.plot .badge.green { background: var(--green); color: #fff; }
+.plot.flash { background: var(--yellow) !important; color: #06122e !important; border-color: var(--yellow); }
+.plot.tapped { border-color: var(--tech); }
+.survey-banner {
+  position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%); z-index: 20;
+  background: var(--yellow); color: #06122e; font-weight: 700; border-radius: 999px; padding: 6px 16px; white-space: nowrap;
+}
+.survey-banner[hidden] { display: none; }
+.map-hint { color: var(--muted); font-size: 0.85rem; margin: 8px 2px 0; }
+
+/* ---------- Build panel ---------- */
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.panel-head h2 { margin: 0; }
+.close-x { min-width: 40px; min-height: 40px; border-radius: 50%; border: 1px solid var(--line); background: transparent; cursor: pointer; font-size: 1.1rem; }
+.opts { display: flex; flex-direction: column; gap: 8px; }
+.opt { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 8px; border-radius: 14px; background: rgba(7, 15, 40, 0.4); border: 1px solid var(--line); }
+.opt-icon { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; }
+.opt-icon svg { width: 24px; height: 24px; }
+.opt-icon.live { background: rgba(230, 159, 0, 0.18); color: var(--live); }
+.opt-icon.tech { background: rgba(86, 180, 233, 0.18); color: var(--tech); }
+.opt-icon.power { background: rgba(163, 178, 216, 0.14); color: #c4cde6; }
+.opt-body { min-width: 0; font-size: 0.85rem; color: var(--muted); }
+.opt-body b { display: block; color: var(--text); font-size: 0.95rem; }
+.opt-body .pv { display: block; color: var(--text); }
+.opt-body .pv .up { color: var(--yellow); }
+.opt-body .warnline { display: block; color: var(--pink); }
+.opt .btn { white-space: nowrap; }
+
+/* ---------- Tasks and alerts ---------- */
+.list { display: flex; flex-direction: column; gap: 8px; }
+.empty { color: var(--muted); font-size: 0.9rem; margin: 0; }
+.task, .alert { border-radius: 14px; padding: 10px 12px; background: rgba(7, 15, 40, 0.4); border: 1px solid var(--line); }
+.task-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.task-top b { font-size: 0.95rem; }
+.task-top .reward { color: var(--yellow); font-weight: 700; white-space: nowrap; font-size: 0.9rem; }
+.task .meta { display: flex; gap: 10px; align-items: center; margin-top: 6px; color: var(--muted); font-size: 0.82rem; flex-wrap: wrap; }
+.task .left { padding: 1px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: var(--text); font-weight: 700; }
+.task .left.soon { background: var(--pink); color: #06122e; }
+.task .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.task .done-items { color: var(--muted); font-size: 0.82rem; margin-top: 4px; }
+.alert { border-left: 4px solid var(--pink); }
+.alert.info { border-left-color: var(--tech); }
+.alert b { display: block; }
+.alert p { margin: 4px 0 0; color: var(--muted); font-size: 0.88rem; }
+.alert .actions { margin-top: 8px; }
+.history { margin-top: 10px; color: var(--muted); font-size: 0.82rem; }
+.history summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+
+/* ---------- Overlays ---------- */
+.overlay { position: fixed; inset: 0; z-index: 80; background: rgba(4, 9, 26, 0.72); display: grid; place-items: center; padding: 16px; }
+.overlay[hidden] { display: none; }
+.modal { width: 100%; max-width: 460px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 22px; }
+.modal h2 { margin: 0 0 8px; font-size: 1.3rem; }
+.modal p { margin: 0 0 12px; }
+.modal .count { height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin: 0 0 16px; }
+.modal .count i { display: block; height: 100%; background: var(--yellow); width: 100%; }
+.modal .row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.toast {
+  position: fixed; left: 50%; top: calc(84px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 90;
+  background: var(--panel-hi); border: 1px solid var(--line); border-left: 4px solid var(--yellow);
+  border-radius: 14px; padding: 10px 16px; font-weight: 700; max-width: min(92vw, 460px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); pointer-events: none;
+}
+.toast[hidden] { display: none; }
+.floater {
+  position: fixed; z-index: 85; transform: translateX(-50%); pointer-events: none;
+  font-weight: 700; font-size: 0.9rem; padding: 2px 8px; border-radius: 999px;
+  background: var(--panel-hi); border: 1px solid var(--line); animation: floatUp 1s ease forwards;
+}
+@keyframes floatUp { 0% { opacity: 0; margin-top: 0; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -30px; } }
+
+/* ---------- Results ---------- */
+.results-wrap { max-width: 720px; margin: 0 auto; }
+.results-wrap h1 { font-size: 1.9rem; margin: 6px 0 6px; }
+.results-wrap .summary { color: var(--muted); margin: 0 0 14px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0 0 14px; }
+@media (max-width: 560px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+.stat small { color: var(--muted); display: block; }
+.stat b { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.stat.live b { color: var(--live); }
+.stat.tech b { color: var(--tech); }
+.mini-map { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; max-width: 300px; margin: 0 0 16px; }
+.mini-map span { aspect-ratio: 1; border-radius: 6px; display: grid; place-items: center; background: rgba(222, 232, 255, 0.06); }
+.mini-map span svg { width: 62%; height: 62%; }
+.mini-map .live { background: rgba(230, 159, 0, 0.18); color: var(--live); }
+.mini-map .tech { background: rgba(86, 180, 233, 0.18); color: var(--tech); }
+.mini-map .power { color: #c4cde6; }
+.mini-map .water { background: #10305c; }
+.notice { border-left: 4px solid var(--yellow); background: rgba(240, 228, 66, 0.07); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 12px 14px; margin: 0 0 18px; font-size: 0.95rem; }
+.notice p { margin: 0 0 6px; }
+.notice p:last-child { margin: 0; }
+.area { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px; margin: 0 0 16px; }
+.area-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.area-head h2 { margin: 0; font-size: 1.35rem; }
+.area-intro { color: var(--muted); margin: 6px 0 12px; font-size: 0.95rem; }
+.chip { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 0.9rem; color: #06122e; white-space: nowrap; }
+.chip.Strong { background: var(--tech); }
+.chip.Developing { background: var(--yellow); }
+.chip.Low { background: var(--pink); }
+.chip.na { background: rgba(255, 255, 255, 0.15); color: var(--text); }
+.chip small { font-weight: 600; opacity: 0.75; }
+.ind { border-top: 1px solid var(--line); padding: 12px 0 2px; }
+.ind-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ind-head h3 { margin: 0; font-size: 1.05rem; }
+.ind p { margin: 6px 0 0; font-size: 0.95rem; }
+.ind .tip { color: var(--muted); }
+.ind .tip b { color: var(--text); }
+details.log { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; margin: 0 0 16px; }
+details.log summary { cursor: pointer; font-weight: 700; min-height: 32px; display: flex; align-items: center; }
+.log-tools { display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+.log-tools span { color: var(--muted); font-size: 0.85rem; }
+.table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; border-radius: var(--radius-md); border: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 8px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
+th { position: sticky; top: 0; background: var(--panel-hi); }
+tr.sys td { color: var(--muted); font-style: italic; }
+.results-actions { display: flex; justify-content: center; margin: 8px 0 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar i, .plot { transition: none; }
+  .floater { animation-duration: 0.4s; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Intro -->
+  <section id="screen-intro" class="screen">
+    <div class="intro-card">
+      <div class="brand">
+        <svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="#56B4E9" stroke-width="2.5"/><circle cx="14" cy="14" r="5" fill="#E69F00"/></svg>
+        MindSphere Analytics
+      </div>
+      <h1>City Grow</h1>
+      <p>City Grow measures dynamic decision-making, working memory and task prioritisation through interactive scenarios. No prior preparation or specialist knowledge is required.</p>
+      <h2>How it works</h2>
+      <ul class="howto">
+        <li>You're the city planner. Tap a plot to build on it, upgrade it or clear it.</li>
+        <li>Grow both Liveability and Technology, and keep the two in balance.</li>
+        <li>Council requests and events arrive as time passes. Requests have deadlines.</li>
+        <li>You have up to 25 minutes. Press Finish whenever you're happy with your city.</li>
+      </ul>
+      <button class="btn primary" id="startBtn" type="button">Start City Grow</button>
+      <p class="fine">A fictional practice assessment. City Grow and MindSphere Analytics are invented for practice and aren't linked to any real provider.</p>
+    </div>
+  </section>
+
+  <!-- Game -->
+  <section id="screen-game" class="screen hidden" aria-label="City Grow">
+    <header class="hud" id="hud">
+      <div class="hud-item"><small>Date</small><b id="hudDate">Year 1, month 1</b><div class="month-bar"><i id="monthBar"></i></div></div>
+      <div class="hud-item" id="hudBudgetWrap"><small>Budget</small><b id="hudBudget">£0k</b></div>
+      <div class="hud-item" id="hudPowerWrap"><small>Power used / available</small><b id="hudPower">0 / 0</b></div>
+      <div class="hud-item"><small>Approval</small><b id="hudApproval">60</b></div>
+      <div class="hud-item"><small>Time left</small><b id="hudTime">25:00</b></div>
+      <div class="hud-spacer"></div>
+      <button class="hud-btn" id="speedBtn" type="button" aria-label="Game speed">Speed 1×</button>
+      <button class="hud-btn finish" id="finishBtn" type="button">Finish</button>
+    </header>
+
+    <div class="layout">
+      <div class="col">
+        <section class="card sec-map" aria-label="City map">
+          <div class="survey-banner" id="surveyBanner" hidden></div>
+          <div class="map" id="map"></div>
+          <p class="map-hint" id="mapHint">Tap a plot to see what you can do there.</p>
+        </section>
+        <section class="card sec-panel" id="panel" hidden aria-live="polite"></section>
+      </div>
+      <div class="col">
+        <section class="card sec-metrics" aria-label="City metrics">
+          <div class="headline">
+            <div class="big-bars">
+              <div class="bar-row"><span>Liveability</span><div class="bar live"><i id="barL"></i></div><b id="valL">0</b></div>
+              <div class="bar-row"><span>Technology</span><div class="bar tech"><i id="barT"></i></div><b id="valT">0</b></div>
+            </div>
+            <div class="ci">
+              <svg viewBox="0 0 120 52" aria-hidden="true">
+                <polygon points="60,30 52,46 68,46" fill="#a3b2d8"/>
+                <g id="beam">
+                  <line x1="14" y1="28" x2="106" y2="28" stroke="#eef2fb" stroke-width="3" stroke-linecap="round"/>
+                  <circle cx="16" cy="20" r="7" fill="#E69F00"/>
+                  <circle cx="104" cy="20" r="7" fill="#56B4E9"/>
+                </g>
+              </svg>
+              <b id="valCI">0</b>
+              <small id="balanceText">City Index</small>
+            </div>
+          </div>
+          <div class="subs" id="subs"></div>
+        </section>
+        <section class="card sec-alerts">
+          <h2>Alerts</h2>
+          <div class="list" id="alerts"><p class="empty">Nothing needs your attention.</p></div>
+        </section>
+        <section class="card sec-tasks">
+          <h2>Council requests</h2>
+          <div class="list" id="tasks"><p class="empty">No requests yet.</p></div>
+          <details class="history"><summary id="historySummary">Finished requests (0)</summary><div id="taskHistory"></div></details>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section id="screen-results" class="screen hidden">
+    <div class="results-wrap" id="resultsWrap"></div>
+  </section>
+</div>
+
+<div class="overlay" id="overlay" hidden><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+'use strict';
+
+/* ==========================================================================
+   CONFIG: every tunable number lives here.
+   Scores run 0 to 100. scale(value, best, worst) maps a raw measure linearly:
+   at or beyond "best" = 100, at or beyond "worst" = 0.
+   ========================================================================== */
+const CONFIG = {
+  timeLimitMs: 25 * 60 * 1000,   // hard limit; the player can finish earlier
+  monthMs: 15000,                // real time per game month at 1x speed
+  speeds: [1, 2],
+  start: { budget: 250, approval: 60 },
+  baseIncome: 18,                // £k per month before buildings
+  approvalIncome: { min: 0.8, per: 1 / 250 },   // income multiplier = min + approval * per
+  debtApprovalLoss: 2,           // approval lost each month in debt
+  refundShare: 0.25,             // share of cost refunded when a plot is cleared
+  cityIndexGapWeight: 0.5,       // City Index = mean(L, T) - weight * |L - T|
+  balancedGap: 10,               // |L - T| at or below this shows as "Balanced"
+
+  // Starting levels for the eight sub-metrics (before any buildings).
+  baseMetrics: { green: 10, housing: 5, health: 22, air: 35, connect: 12, innov: 8, auto: 6, energy: 15 },
+  blackout: { techFactor: 0.6, healthPenalty: 8, incomeFactor: 0.8 },
+  adjacency: {
+    factoryHomes: { housing: -2, health: -2 },   // per factory next to homes
+    fibreLab: { innov: 4 },                       // per fibre hub next to a lab
+    parkHomes: { health: 2 }                      // per park next to homes
+  },
+
+  // fx = sub-metric effects. Upgrades on liveability buildings add tech; on tech buildings add liveability.
+  buildings: {
+    homes:   { name: 'Homes', side: 'live', cost: 60, upkeep: 0, income: 4, demand: 1, fx: { housing: 14, green: -2, health: -2 },
+               note: 'Healthier next to a park, unhappy next to a factory.',
+               upgrade: { name: 'Smart homes', cost: 55, upkeep: 1, demand: 1, fx: { connect: 5, energy: 3, housing: 2 } } },
+    park:    { name: 'Park', side: 'live', cost: 50, upkeep: 1, demand: 0, fx: { green: 16, air: 5 },
+               note: 'Improves health of homes next to it.',
+               upgrade: { name: 'Sensor park', cost: 50, upkeep: 1, demand: 1, fx: { connect: 4, green: 3, air: 3 } } },
+    clinic:  { name: 'Clinic', side: 'live', cost: 100, upkeep: 4, demand: 2, fx: { health: 18 },
+               upgrade: { name: 'Digital clinic', cost: 60, upkeep: 1, demand: 1, fx: { health: 6, innov: 6 } } },
+    tram:    { name: 'Tram stop', side: 'live', cost: 75, upkeep: 2, demand: 1, fx: { air: 12, health: 3, connect: 3 },
+               upgrade: { name: 'Autonomous tram', cost: 60, upkeep: 1, demand: 1, fx: { auto: 8, air: 3 } } },
+    fibre:   { name: 'Fibre hub', side: 'tech', cost: 75, upkeep: 2, demand: 2, fx: { connect: 16 },
+               note: 'Boosts innovation at any lab next to it.',
+               upgrade: { name: 'Rooftop garden', cost: 45, upkeep: 0, demand: 0, fx: { green: 5, air: 2 } } },
+    lab:     { name: 'Innovation lab', side: 'tech', cost: 120, upkeep: 3, income: 6, demand: 3, fx: { innov: 18, housing: -2 },
+               note: 'Works better with a fibre hub next door.',
+               upgrade: { name: 'Health research wing', cost: 55, upkeep: 0, demand: 0, fx: { health: 6, innov: 3 } } },
+    factory: { name: 'Robot factory', side: 'tech', cost: 110, upkeep: 2, income: 9, demand: 4, fx: { auto: 18, air: -6, green: -2 },
+               note: 'Noisy: lowers housing and health of homes next to it.',
+               upgrade: { name: 'Clean retrofit', cost: 60, upkeep: 0, demand: 0, fx: { air: 6, energy: 3 } } },
+    solar:   { name: 'Solar farm', side: 'tech', cost: 85, upkeep: 1, supply: 6, fx: { energy: 16, air: 3 },
+               upgrade: { name: 'Wildflower verges', cost: 40, upkeep: 0, demand: 0, fx: { green: 5 } } }
+  },
+  powerStation: { name: 'Old power station', supply: 12, upkeep: 2, fx: { air: -10, energy: -5 }, decommissionCost: 30 },
+
+  // Scheduled events (game month), each shifted randomly by up to +/- jitter months.
+  events: [
+    { key: 'powerFault', month: 7, jitter: 1, supplyPenalty: 8, repairCost: 90 },
+    { key: 'grant', month: 12, jitter: 1, months: 6, discount: 0.5 },
+    { key: 'surge', month: 17, jitter: 1, housingPenalty: 15 },
+    { key: 'carbon', month: 23, jitter: 1, extraUpkeep: 8, extraAir: -6 },
+    { key: 'breach', month: 29, jitter: 1, connectPenalty: 15, fixCost: 60 }
+  ],
+
+  tasks: {
+    maxOpen: 5,
+    kinds: {
+      build:    { reward: 40, approval: 4, penalty: 6, months: 6 },
+      district: { reward: 60, approval: 5, penalty: 6, months: 7 },
+      metric:   { reward: 90, approval: 6, penalty: 8, months: 10, raiseBy: 15, maxTarget: 80 },
+      upgrade:  { reward: 70, approval: 5, penalty: 6, months: 8, count: 2 },
+      call:     { reward: 120, approval: 8, penalty: 10, months: 10 },
+      survey:   { reward: 0, approval: 3, penalty: 5, months: 6, nominalValue: 40 }
+    },
+    schedule: [[2, 'build'], [4, 'survey'], [5, 'district'], [8, 'call'], [9, 'metric'], [11, 'upgrade'], [13, 'district'],
+      [15, 'survey'], [16, 'metric'], [19, 'call'], [21, 'build'], [23, 'upgrade'], [26, 'survey'], [27, 'metric'],
+      [29, 'district'], [31, 'call'], [34, 'metric']],
+    repeatEveryMonths: 4,
+    repeatKinds: ['build', 'district', 'metric', 'upgrade']
+  },
+  briefing: { showMs: 8000, replayCost: 15 },          // mayor's call: details then hidden
+  survey: { startSpan: 3, maxSpan: 9, maxTrials: 4, maxFails: 2, flashMs: 650, gapMs: 250, rewardPerSpan: 10 },
+
+  bands: { strong: 67, developing: 40 },
+
+  scoring: {
+    events: {
+      powerBlackoutBest: 0, powerBlackoutWorst: 6,     // months in power shortfall within 12 months of the fault
+      surgeBest: 3, surgeWorst: 12,                    // months to restore housing after the surge
+      breachBest: 1, breachWorst: 8,                   // months to fix the data breach
+      unresolvedExtra: 3,                              // added to latency if never resolved
+      carbonCheckMonths: 6, carbonDirtyPenalty: 15, carbonNewPenalty: 20,
+      grantBehindGap: 5, grantAheadGap: 10
+    },
+    balancing: { ciBest: 60, ciWorst: 25, gap: 12, fromMonth: 10, shareBest: 0.7, shareWorst: 0.2, weightCI: 0.5, weightShare: 0.5 },
+    budget: { debtBest: 0, debtWorst: 6, idleBest: 150, idleWorst: 500, weakCI: 55, fromMonth: 4, weightDebt: 0.5, weightIdle: 0.5 },
+    finishing: { goodCI: 55, goodGap: 12, okCI: 45, earlyGood: 100, earlyOk: 65, earlyWeak: 30,
+      limitImproving: 70, limitFlat: 45, improveWindowMs: 300000, improveBy: 5 },
+    sequence: { spanBest: 7, spanWorst: 3, accBest: 0.8, accWorst: 0.3, weightSpan: 0.7, weightAcc: 0.3 },
+    briefings: { best: 1, worst: 0.25, replayPenalty: 10, minMonthsOpen: 4 },
+    value: { best: 0.8, worst: 0.3 },
+    deadlines: { best: 0.1, worst: 0.6, dismissWeight: 0.5 },
+    ordering: { urgencyRatio: 1.25, best: 0, worst: 0.5 },
+    urgent: { best: 0, worst: 10 }                     // months in power shortfall or debt
+  }
+};
+
+/* ==========================================================================
+   Vocabulary
+   ========================================================================== */
+const LIVE = ['green', 'housing', 'health', 'air'];
+const TECH = ['connect', 'innov', 'auto', 'energy'];
+const SUB_LABEL = { green: 'Green space', housing: 'Housing', health: 'Health', air: 'Air quality',
+  connect: 'Connectivity', innov: 'Innovation', auto: 'Automation', energy: 'Clean energy' };
+const DISTRICTS = ['Old Town', 'Harbour', 'Hillside', 'Riverside'];
+const WATER = new Set(['0,4', '0,5', '1,5', '4,5', '5,5']);
+const START_BUILDINGS = { '1,1': 'homes', '1,2': 'homes', '2,1': 'park', '4,3': 'power' };
+const BTYPES = Object.keys(CONFIG.buildings);
+
+const ICON = {
+  homes: '<path d="M3.5 11.5 12 4l8.5 7.5V20h-17z" fill="currentColor"/>',
+  park: '<circle cx="12" cy="9.5" r="6" fill="currentColor"/><rect x="11" y="13" width="2" height="7.5" rx="1" fill="currentColor"/>',
+  clinic: '<path d="M9 3.5h6v5.5h5.5v6H15v5.5H9V15H3.5V9H9z" fill="currentColor"/>',
+  tram: '<rect x="5" y="3.5" width="14" height="13" rx="3.5" fill="currentColor"/><circle cx="8.5" cy="19.5" r="1.8" fill="currentColor"/><circle cx="15.5" cy="19.5" r="1.8" fill="currentColor"/>',
+  fibre: '<circle cx="12" cy="17.5" r="2.4" fill="currentColor"/><path d="M7.3 12.8a6.6 6.6 0 0 1 9.4 0M4.3 9.7a10.9 10.9 0 0 1 15.4 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+  lab: '<path d="M9 3h6v2h-1v4.6l5.2 8.6A2 2 0 0 1 17.5 21h-11a2 2 0 0 1-1.7-2.8L10 9.6V5H9z" fill="currentColor"/>',
+  factory: '<path d="M3 20.5V10l5 3v-3l5 3v-3l5 3V4h3v16.5z" fill="currentColor"/>',
+  solar: '<path d="M3.5 15.5 7 7h13.5L17 15.5z" fill="currentColor"/><rect x="10.5" y="15.5" width="2.2" height="5" fill="currentColor"/>',
+  power: '<path d="M4 21v-8h4V5h3.5v8H20v8z" fill="currentColor"/><circle cx="9.5" cy="3" r="1.6" fill="currentColor" opacity=".6"/>',
+  water: '',
+  smart: '<path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/>',
+  leaf: '<path d="M20 4C9 4 4 9 4 16c0 1.5.3 3 .8 4C6 12 11 9 16 8c-4 2-8 6-9.5 12 7 0 13-5 13.5-16z" fill="currentColor"/>'
+};
+const svgIcon = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k] || ''}</svg>`;
+
+/* ==========================================================================
+   Helpers
+   ========================================================================== */
+const $ = id => document.getElementById(id);
+const randInt = n => Math.floor(Math.random() * n);
+const pick = arr => arr[randInt(arr.length)];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const mean = a => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
+const round1 = v => Math.round(v * 10) / 10;
+const money = v => (v < 0 ? '−£' : '£') + Math.abs(Math.round(v)) + 'k';
+const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(round1(v));
+const article = s => (/^[aeiou]/i.test(s) ? 'an ' : 'a ') + s;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+function median(a) {
+  a = a.filter(v => v != null && !isNaN(v)).sort((x, y) => x - y);
+  if (!a.length) return null;
+  const m = a.length >> 1;
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+function scale(v, best, worst) {
+  if (v == null || isNaN(v)) return null;
+  if (best === worst) return v === best ? 100 : 0;
+  return Math.round(clamp((v - worst) / (best - worst), 0, 1) * 100);
+}
+function weightedMean(pairs) {
+  const ok = pairs.filter(([s]) => s != null);
+  const w = ok.reduce((t, [, wt]) => t + wt, 0);
+  if (!ok.length || w === 0) return null;
+  return Math.round(ok.reduce((t, [s, wt]) => t + s * wt, 0) / w);
+}
+function band(score) {
+  if (score == null) return null;
+  if (score >= CONFIG.bands.strong) return 'Strong';
+  if (score >= CONFIG.bands.developing) return 'Developing';
+  return 'Low';
+}
+const fxText = fx => Object.keys(fx).map(k => `${fx[k] > 0 ? '+' : '−'}${Math.abs(fx[k])} ${SUB_LABEL[k]}`).join(', ');
+
+/* ==========================================================================
+   State
+   ========================================================================== */
+const S = {
+  phase: 'intro', speed: 1, elapsed: 0, monthAcc: 0, lastTick: 0, raf: 0, t0: 0,
+  month: 0, budget: 0, approval: 0, plots: [],
+  mods: { powerFault: false, grantUntil: -1, surge: false, carbon: false, breach: false },
+  eventPlan: [], eventInfo: {}, alerts: [],
+  tasks: [], taskSeq: 0, schedule: [], nextRepeat: 0,
+  builds: [], upgrades: [],
+  selected: null, overlay: null, survey: null, bestSpan: 0,
+  history: [], log: [], finishedBy: null, toastTimer: 0
+};
+const pausedForOverlay = () => !!S.overlay || !!S.survey;
+const playing = () => S.phase === 'play';
+const plotAt = (r, c) => (r < 0 || c < 0 || r > 5 || c > 5 ? null : S.plots[r * 6 + c]);
+const sideOf = type => (type === 'power' ? 'power' : CONFIG.buildings[type].side);
+
+function makePlots() {
+  const out = [];
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 6; c++) {
+      const key = `${r},${c}`;
+      const d = (r < 3 ? 0 : 2) + (c < 3 ? 0 : 1);
+      const t = START_BUILDINGS[key];
+      out.push({ id: r * 6 + c, r, c, d, water: WATER.has(key), b: t ? { type: t, up: false, built: 0, initial: true } : null });
+    }
+  }
+  return out;
+}
+const plotName = p => `${DISTRICTS[p.d]} plot ${p.r * 6 + p.c + 1}`;
+
+/* ==========================================================================
+   City model: compute every metric from the plots and active modifiers.
+   ========================================================================== */
+function compute(plots, mods) {
+  const B = CONFIG.buildings, E = eventCfg;
+  const sub = { ...CONFIG.baseMetrics };
+  let supply = 0, demand = 0, income = CONFIG.baseIncome, upkeep = 0, dirtyFactories = 0, hasStation = false;
+  const add = fx => { for (const k in fx) sub[k] += fx[k]; };
+  for (const p of plots) {
+    const b = p.b;
+    if (!b) continue;
+    if (b.type === 'power') {
+      const P = CONFIG.powerStation;
+      hasStation = true;
+      supply += P.supply - (mods.powerFault ? E.powerFault.supplyPenalty : 0);
+      upkeep += P.upkeep;
+      add(P.fx);
+      continue;
+    }
+    const d = B[b.type];
+    add(d.fx);
+    upkeep += d.upkeep || 0; income += d.income || 0; demand += d.demand || 0; supply += d.supply || 0;
+    if (b.up) { const u = d.upgrade; add(u.fx); upkeep += u.upkeep || 0; demand += u.demand || 0; supply += u.supply || 0; }
+    if (b.type === 'factory' && !b.up) {
+      dirtyFactories++;
+      if (mods.carbon) { upkeep += E.carbon.extraUpkeep; add({ air: E.carbon.extraAir }); }
+    }
+    // Adjacency (orthogonal neighbours, across district edges too)
+    for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      const n = plots[(p.r + dr) * 6 + (p.c + dc)];
+      if (p.r + dr < 0 || p.r + dr > 5 || p.c + dc < 0 || p.c + dc > 5 || !n || !n.b) continue;
+      if (b.type === 'factory' && n.b.type === 'homes') add(CONFIG.adjacency.factoryHomes);
+      if (b.type === 'fibre' && n.b.type === 'lab') add(CONFIG.adjacency.fibreLab);
+      if (b.type === 'park' && n.b.type === 'homes') add(CONFIG.adjacency.parkHomes);
+    }
+  }
+  if (mods.surge) sub.housing -= E.surge.housingPenalty;
+  if (mods.breach) sub.connect -= E.breach.connectPenalty;
+  for (const k in sub) sub[k] = clamp(sub[k], 0, 100);
+  const blackout = demand > supply;
+  if (blackout) {
+    for (const k of TECH) sub[k] *= CONFIG.blackout.techFactor;
+    sub.health = clamp(sub.health - CONFIG.blackout.healthPenalty, 0, 100);
+  }
+  for (const k in sub) sub[k] = round1(sub[k]);
+  const L = round1(mean(LIVE.map(k => sub[k])));
+  const T = round1(mean(TECH.map(k => sub[k])));
+  const gap = round1(Math.abs(L - T));
+  const CI = round1(clamp((L + T) / 2 - CONFIG.cityIndexGapWeight * gap, 0, 100));
+  return { sub, L, T, gap, CI, supply, demand, blackout, income, upkeep, dirtyFactories, hasStation };
+}
+let eventCfg = {};
+CONFIG.events.forEach(e => { eventCfg[e.key] = e; });
+const current = () => compute(S.plots, S.mods);
+const grantActive = () => S.month <= S.mods.grantUntil;
+function costOf(type) {
+  const d = CONFIG.buildings[type];
+  return d.side === 'tech' && grantActive() ? Math.round(d.cost * (1 - eventCfg.grant.discount)) : d.cost;
+}
+/* What a change would do: compute a hypothetical city. */
+function previewWith(mutate) {
+  const plots = S.plots.map(p => ({ ...p, b: p.b ? { ...p.b } : null }));
+  mutate(plots);
+  return compute(plots, S.mods);
+}
+
+/* ==========================================================================
+   Logging
+   ========================================================================== */
+function logAction(extra) {
+  const c = current();
+  const e = {
+    seq: S.log.length + 1,
+    t: Math.round(S.elapsed),                // ms of real time since start
+    time: new Date().toISOString(),
+    month: S.month,
+    action: null, plot: null, district: null, building: null, cost: 0,
+    budget: Math.round(S.budget), approval: Math.round(S.approval),
+    L: c.L, T: c.T, CI: c.CI, blackout: c.blackout, speed: S.speed,
+    ...extra
+  };
+  S.log.push(e);
+  return e;
+}
+
+/* ==========================================================================
+   Game flow
+   ========================================================================== */
+function startGame() {
+  Object.assign(S, {
+    phase: 'play', speed: 1, elapsed: 0, monthAcc: 0, month: 1,
+    budget: CONFIG.start.budget, approval: CONFIG.start.approval, plots: makePlots(),
+    mods: { powerFault: false, grantUntil: -1, surge: false, carbon: false, breach: false },
+    eventInfo: {}, alerts: [], tasks: [], taskSeq: 0, builds: [], upgrades: [],
+    selected: null, overlay: null, survey: null, bestSpan: 0, history: [], log: [], finishedBy: null
+  });
+  S.eventPlan = CONFIG.events.map(e => ({ key: e.key, month: e.month + randInt(2 * e.jitter + 1) - e.jitter, fired: false }));
+  S.schedule = CONFIG.tasks.schedule.map(([m, k]) => ({ month: m, kind: k }));
+  S.nextRepeat = Math.max(...CONFIG.tasks.schedule.map(s => s[0])) + CONFIG.tasks.repeatEveryMonths;
+  buildMap();
+  showScreen('game');
+  logAction({ action: 'system', note: 'City Grow started' });
+  snapshot();
+  renderAll();
+  S.lastTick = performance.now();
+  cancelAnimationFrame(S.raf);
+  S.raf = requestAnimationFrame(loop);
+}
+
+function loop(now) {
+  if (!playing()) return;
+  const dt = Math.min(250, now - S.lastTick);   // capped so a hidden tab effectively pauses
+  S.lastTick = now;
+  S.elapsed += dt;
+  if (!pausedForOverlay()) {
+    S.monthAcc += dt * S.speed;
+    if (S.monthAcc >= CONFIG.monthMs) { S.monthAcc -= CONFIG.monthMs; tick(); }
+  }
+  renderTimers();
+  if (S.elapsed >= CONFIG.timeLimitMs) { finishGame('time'); return; }
+  S.raf = requestAnimationFrame(loop);
+}
+
+/* One game month passes. */
+function tick() {
+  S.month++;
+  const c = current();
+  const mult = CONFIG.approvalIncome.min + S.approval * CONFIG.approvalIncome.per;
+  const net = c.income * mult * (c.blackout ? CONFIG.blackout.incomeFactor : 1) - c.upkeep;
+  S.budget += net;
+  if (S.budget < 0) S.approval = clamp(S.approval - CONFIG.debtApprovalLoss, 0, 100);
+
+  // Deadlines
+  for (const t of S.tasks) {
+    if (t.status === 'open' && S.month > t.deadline) {
+      t.status = 'missed';
+      t.closedMonth = S.month;
+      S.approval = clamp(S.approval - t.penalty, 0, 100);
+      logAction({ action: 'task-missed', taskId: t.id, note: t.title });
+    }
+  }
+  if (S.mods.grantUntil >= 0 && S.month === S.mods.grantUntil + 1) {
+    S.alerts = S.alerts.filter(a => a.key !== 'grant');
+    logAction({ action: 'system', note: 'Grant ended' });
+  }
+  // Events and new requests
+  for (const ev of S.eventPlan) if (!ev.fired && S.month >= ev.month) { ev.fired = true; fireEvent(ev.key); }
+  spawnTasks();
+  checkTasks();
+  snapshot(net);
+  renderAll();
+}
+
+function snapshot(net) {
+  const c = current();
+  const h = { month: S.month, ms: Math.round(S.elapsed), L: c.L, T: c.T, CI: c.CI, gap: c.gap, sub: c.sub,
+    budget: Math.round(S.budget), approval: Math.round(S.approval), supply: c.supply, demand: c.demand,
+    blackout: c.blackout, debt: S.budget < 0, dirtyFactories: c.dirtyFactories, breach: S.mods.breach, powerFault: S.mods.powerFault };
+  S.history.push(h);
+  if (S.month > 0 && net != null) {
+    logAction({ action: 'month', note: `Net ${money(net)}, power ${c.demand}/${c.supply}${c.blackout ? ' (shortfall)' : ''}` });
+  }
+}
+
+/* ==========================================================================
+   Events (dynamic changes)
+   ========================================================================== */
+function fireEvent(key) {
+  const E = eventCfg[key], before = current();
+  const info = { month: S.month, L: before.L, T: before.T, ms: Math.round(S.elapsed) };
+  let alert;
+  if (key === 'powerFault') {
+    if (!before.hasStation) { info.skipped = true; S.eventInfo[key] = info; return; }
+    S.mods.powerFault = true;
+    alert = { key, urgent: true, title: 'Power station fault', text: `The old power station has lost ${E.supplyPenalty} units of output until it is repaired.` };
+  } else if (key === 'grant') {
+    S.mods.grantUntil = S.month + E.months - 1;
+    alert = { key, urgent: false, title: 'Technology grant', text: `Tech buildings cost ${Math.round(E.discount * 100)}% less for the next ${E.months} months.` };
+  } else if (key === 'surge') {
+    info.housingBefore = before.sub.housing;
+    S.mods.surge = true;
+    alert = { key, urgent: false, title: 'New residents arrive', text: `A wave of new residents has arrived. Housing is ${E.housingPenalty} points lower.` };
+  } else if (key === 'carbon') {
+    info.dirtyAtStart = before.dirtyFactories;
+    S.mods.carbon = true;
+    alert = { key, urgent: false, title: 'New carbon rules', text: `From now on, each robot factory without a clean retrofit costs £${E.extraUpkeep}k more a month and lowers Air quality by ${Math.abs(E.extraAir)} more.` };
+  } else if (key === 'breach') {
+    S.mods.breach = true;
+    alert = { key, urgent: true, title: 'Data breach', text: `A cyber attack has hit the city network. Connectivity is ${E.connectPenalty} points lower until it is fixed.` };
+  }
+  S.eventInfo[key] = info;
+  S.alerts.push(alert);
+  logAction({ action: 'event', note: alert.title });
+  toast(alert.title);
+}
+function repairPower() {
+  if (!playing() || !S.mods.powerFault || pausedForOverlay()) return;
+  const cost = eventCfg.powerFault.repairCost;
+  if (S.budget < cost) return;
+  S.budget -= cost;
+  S.mods.powerFault = false;
+  S.eventInfo.powerFault.resolvedMonth = S.month;
+  S.alerts = S.alerts.filter(a => a.key !== 'powerFault');
+  logAction({ action: 'respond', note: 'Repaired the power station', cost });
+  afterChange();
+}
+function fixBreach() {
+  if (!playing() || !S.mods.breach || pausedForOverlay()) return;
+  const cost = eventCfg.breach.fixCost;
+  if (S.budget < cost) return;
+  S.budget -= cost;
+  S.mods.breach = false;
+  S.eventInfo.breach.resolvedMonth = S.month;
+  S.alerts = S.alerts.filter(a => a.key !== 'breach');
+  logAction({ action: 'respond', note: 'Funded cyber security', cost });
+  afterChange();
+}
+
+/* ==========================================================================
+   Council requests
+   ========================================================================== */
+function freeDistricts() {
+  return [0, 1, 2, 3].filter(d => S.plots.some(p => p.d === d && !p.water && !p.b));
+}
+function spawnTasks() {
+  const T = CONFIG.tasks;
+  const due = S.schedule.filter(s => s.month <= S.month);
+  if (S.month >= S.nextRepeat) {
+    due.push({ month: S.month, kind: pick(T.repeatKinds) });
+    S.nextRepeat += T.repeatEveryMonths;
+  }
+  for (const s of due) {
+    const open = S.tasks.filter(t => t.status === 'open').length;
+    if (open >= T.maxOpen) { s.month = S.month + 1; continue; }   // wait for room
+    const idx = S.schedule.indexOf(s);
+    if (idx >= 0) S.schedule.splice(idx, 1);
+    createTask(s.kind);
+  }
+}
+function createTask(kind) {
+  const K = CONFIG.tasks.kinds[kind];
+  const c = current();
+  const t = { id: 'R' + String(++S.taskSeq).padStart(2, '0'), kind, status: 'open', createdMonth: S.month,
+    deadline: S.month + K.months, reward: K.reward, approval: K.approval, penalty: K.penalty,
+    buildAt: S.builds.length, upgAt: S.upgrades.length, replays: 0 };
+  const districts = freeDistricts();
+  if ((kind === 'district' || kind === 'call') && !districts.length) kind = t.kind = 'upgrade';
+  if (kind === 'build') {
+    t.type = pick(BTYPES);
+    t.title = `Build ${article(CONFIG.buildings[t.type].name.toLowerCase())}`;
+  } else if (kind === 'district') {
+    t.type = pick(BTYPES);
+    t.district = pick(districts);
+    t.title = `Build ${article(CONFIG.buildings[t.type].name.toLowerCase())} in ${DISTRICTS[t.district]}`;
+  } else if (kind === 'metric') {
+    const K2 = CONFIG.tasks.kinds.metric;
+    const options = [...LIVE, ...TECH].filter(k => c.sub[k] < K2.maxTarget - 5).sort((a, b) => c.sub[a] - c.sub[b]);
+    if (!options.length) return createTask('upgrade');
+    t.key = options[randInt(Math.min(3, options.length))];
+    t.target = Math.min(K2.maxTarget, Math.round(c.sub[t.key] + K2.raiseBy));
+    t.title = `Raise ${SUB_LABEL[t.key]} to ${t.target}`;
+  } else if (kind === 'upgrade') {
+    t.count = CONFIG.tasks.kinds.upgrade.count;
+    t.title = `Upgrade ${t.count} buildings`;
+  } else if (kind === 'call') {
+    const d1 = pick(districts);
+    const d2 = districts.length > 1 ? pick(districts.filter(d => d !== d1)) : d1;
+    t.items = [
+      { type: pick(BTYPES.filter(b => CONFIG.buildings[b].side === 'live')), district: d1, done: false },
+      { type: pick(BTYPES.filter(b => CONFIG.buildings[b].side === 'tech')), district: d2, done: false }
+    ];
+    t.title = 'Call from the mayor';
+    t.detail = `Please build ${article(CONFIG.buildings[t.items[0].type].name.toLowerCase())} in ${DISTRICTS[d1]} and ${article(CONFIG.buildings[t.items[1].type].name.toLowerCase())} in ${DISTRICTS[d2]} within ${K.months} months.`;
+  } else if (kind === 'survey') {
+    t.title = 'Drone survey';
+  }
+  S.tasks.push(t);
+  logAction({ action: 'task-new', taskId: t.id, note: t.title + (t.detail ? ': ' + t.detail : '') });
+  if (kind === 'call') showBriefing(t, false);
+  else toast('New request: ' + t.title);
+}
+const taskValue = t => (t.kind === 'survey' ? CONFIG.tasks.kinds.survey.nominalValue : t.reward) + t.penalty * 5;
+const urgencyOf = t => taskValue(t) / Math.max(1, t.deadline - S.month + 1);
+
+function checkTasks() {
+  const c = current();
+  for (const t of S.tasks) {
+    if (t.status !== 'open') continue;
+    const newBuilds = S.builds.slice(t.buildAt);
+    let done = false;
+    if (t.kind === 'build') done = newBuilds.some(b => b.type === t.type);
+    else if (t.kind === 'district') done = newBuilds.some(b => b.type === t.type && b.district === t.district);
+    else if (t.kind === 'metric') done = c.sub[t.key] >= t.target;
+    else if (t.kind === 'upgrade') done = S.upgrades.length - t.upgAt >= t.count;
+    else if (t.kind === 'call') {
+      for (const it of t.items) if (!it.done && newBuilds.some(b => b.type === it.type && b.district === it.district)) {
+        it.done = true;
+        logAction({ action: 'call-item', taskId: t.id, note: `${CONFIG.buildings[it.type].name} in ${DISTRICTS[it.district]} done` });
+      }
+      done = t.items.every(it => it.done);
+    }
+    if (done) completeTask(t, t.reward);
+  }
+}
+function completeTask(t, reward) {
+  const others = S.tasks.filter(x => x.status === 'open' && x !== t).map(x => ({ id: x.id, urgency: round1(urgencyOf(x)) }));
+  const own = round1(urgencyOf(t));
+  t.status = 'done';
+  t.closedMonth = S.month;
+  t.earned = reward;
+  S.budget += reward;
+  S.approval = clamp(S.approval + t.approval, 0, 100);
+  logAction({ action: 'task-done', taskId: t.id, note: t.title, reward, urgency: own, openOthers: others });
+  toast(`Request done: ${t.title} (+${money(reward)})`);
+}
+function dismissTask(id) {
+  const t = S.tasks.find(x => x.id === id);
+  if (!playing() || !t || t.status !== 'open' || pausedForOverlay()) return;
+  t.status = 'dismissed';
+  t.closedMonth = S.month;
+  const loss = Math.ceil(t.penalty / 2);
+  S.approval = clamp(S.approval - loss, 0, 100);
+  logAction({ action: 'task-dismiss', taskId: t.id, note: `${t.title} (approval −${loss})` });
+  renderAll();
+}
+
+/* ---------- Mayor's call: details shown briefly, then hidden ---------- */
+function showBriefing(t, replay) {
+  S.overlay = 'briefing';
+  const ms = CONFIG.briefing.showMs;
+  $('modal').innerHTML = `<h2>${esc(t.title)}</h2><p>${esc(t.detail)}</p>
+    <div class="count"><i id="briefCount"></i></div>
+    <p style="color:var(--muted);font-size:.88rem">These details will be hidden after this message closes.</p>
+    <div class="row"><button class="btn primary small" id="briefOk" type="button">Got it</button></div>`;
+  $('overlay').hidden = false;
+  const bar = $('briefCount');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  void bar.offsetWidth;
+  bar.style.transition = `width ${ms}ms linear`;
+  bar.style.width = '0%';
+  const opened = S.elapsed;
+  const close = () => {
+    if (S.overlay !== 'briefing') return;
+    clearTimeout(S.briefTimer);
+    S.overlay = null;
+    $('overlay').hidden = true;
+    logAction({ action: replay ? 'briefing-replay-closed' : 'briefing-closed', taskId: t.id, viewMs: Math.round(S.elapsed - opened) });
+    renderAll();
+  };
+  $('briefOk').addEventListener('click', close);
+  S.briefTimer = setTimeout(close, ms);
+  $('briefOk').focus();
+}
+function replayCall(id) {
+  const t = S.tasks.find(x => x.id === id);
+  if (!playing() || !t || t.status !== 'open' || pausedForOverlay()) return;
+  const cost = CONFIG.briefing.replayCost;
+  if (S.budget < cost) return;
+  S.budget -= cost;
+  t.replays++;
+  logAction({ action: 'briefing-replay', taskId: t.id, cost });
+  showBriefing(t, true);
+}
+
+/* ---------- Drone survey: remember the order of flashing plots ---------- */
+async function startSurvey(id) {
+  const t = S.tasks.find(x => x.id === id);
+  if (!playing() || !t || t.status !== 'open' || pausedForOverlay()) return;
+  const C = CONFIG.survey;
+  S.selected = null;
+  renderPanel();
+  S.survey = { task: t, span: S.bestSpan ? Math.max(C.startSpan, S.bestSpan - 1) : C.startSpan, trials: [], fails: 0, input: null, token: Symbol('s') };
+  const tok = S.survey.token;
+  logAction({ action: 'survey-start', taskId: t.id });
+  renderAll();
+  $('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  await sleep(600);
+  let earned = 0;
+  for (let trial = 0; trial < C.maxTrials; trial++) {
+    if (!S.survey || S.survey.token !== tok) return;
+    const span = S.survey.span;
+    const seq = [];
+    while (seq.length < span) { const id2 = randInt(36); if (!seq.includes(id2)) seq.push(id2); }
+    banner(`Drone survey: watch the order (${span} plots)`);
+    await sleep(500);
+    for (const pid of seq) {
+      if (!S.survey || S.survey.token !== tok) return;
+      const el = plotEls[pid];
+      el.classList.add('flash');
+      await sleep(C.flashMs);
+      el.classList.remove('flash');
+      await sleep(C.gapMs);
+    }
+    banner(`Your turn: tap the ${span} plots in the same order`);
+    const started = S.elapsed;
+    const answer = await new Promise(resolve => { S.survey.input = { seq: [], need: span, resolve }; });
+    if (!S.survey || S.survey.token !== tok) return;
+    const correct = answer.every((v, i) => v === seq[i]);
+    S.survey.trials.push({ span, correct });
+    logAction({ action: 'survey-trial', taskId: t.id, span, correct, note: `Shown ${seq.join('-')}, tapped ${answer.join('-')}`, responseMs: Math.round(S.elapsed - started) });
+    plotEls.forEach(e => e.classList.remove('tapped'));
+    if (correct) {
+      earned += C.rewardPerSpan * span;
+      S.bestSpan = Math.max(S.bestSpan, span);
+      S.survey.fails = 0;
+      banner('Correct');
+      S.survey.span = Math.min(C.maxSpan, span + 1);
+    } else {
+      S.survey.fails++;
+      banner('Not quite');
+    }
+    await sleep(900);
+    if (S.survey.fails >= C.maxFails) break;
+  }
+  if (!S.survey || S.survey.token !== tok) return;
+  banner(null);
+  S.survey = null;
+  completeTask(t, earned);
+  logAction({ action: 'survey-end', taskId: t.id, reward: earned });
+  renderAll();
+}
+function surveyTap(pid) {
+  const inp = S.survey && S.survey.input;
+  if (!inp) return;
+  inp.seq.push(pid);
+  plotEls[pid].classList.add('tapped');
+  if (inp.seq.length >= inp.need) { S.survey.input = null; inp.resolve(inp.seq); }
+}
+function banner(text) {
+  const b = $('surveyBanner');
+  if (!text) { b.hidden = true; return; }
+  b.textContent = text;
+  b.hidden = false;
+}
+
+/* ==========================================================================
+   Building actions
+   ========================================================================== */
+function canChange() { return playing() && !pausedForOverlay(); }
+function build(pid, type) {
+  const p = S.plots[pid];
+  if (!canChange() || !p || p.water || p.b) return;
+  const cost = costOf(type);
+  if (S.budget < cost) return;
+  const before = current();
+  S.budget -= cost;
+  p.b = { type, up: false, built: S.month, paid: cost };
+  S.builds.push({ type, district: p.d, month: S.month, plot: pid, side: CONFIG.buildings[type].side });
+  const after = current();
+  logAction({ action: 'build', plot: pid, district: DISTRICTS[p.d], building: CONFIG.buildings[type].name, cost,
+    note: `L ${signed(after.L - before.L)}, T ${signed(after.T - before.T)}` + (grantActive() && CONFIG.buildings[type].side === 'tech' ? ' (grant price)' : '') });
+  floatAt(plotEls[pid], '−' + money(cost));
+  afterChange();
+}
+function upgrade(pid) {
+  const p = S.plots[pid];
+  if (!canChange() || !p || !p.b || p.b.type === 'power' || p.b.up) return;
+  const u = CONFIG.buildings[p.b.type].upgrade;
+  if (S.budget < u.cost) return;
+  const before = current();
+  S.budget -= u.cost;
+  p.b.up = true;
+  S.upgrades.push({ type: p.b.type, month: S.month, plot: pid });
+  const after = current();
+  logAction({ action: 'upgrade', plot: pid, district: DISTRICTS[p.d], building: u.name, cost: u.cost,
+    note: `L ${signed(after.L - before.L)}, T ${signed(after.T - before.T)}` });
+  floatAt(plotEls[pid], '−' + money(u.cost));
+  afterChange();
+}
+function clearPlot(pid) {
+  const p = S.plots[pid];
+  if (!canChange() || !p || !p.b) return;
+  let delta;
+  if (p.b.type === 'power') {
+    delta = -CONFIG.powerStation.decommissionCost;
+    if (S.budget + delta < 0) return;
+    if (S.mods.powerFault) { S.mods.powerFault = false; S.eventInfo.powerFault.resolvedMonth = S.month; S.alerts = S.alerts.filter(a => a.key !== 'powerFault'); }
+  } else {
+    const d = CONFIG.buildings[p.b.type];
+    delta = Math.round(((p.b.paid != null ? p.b.paid : d.cost) + (p.b.up ? d.upgrade.cost : 0)) * CONFIG.refundShare);
+  }
+  const name = p.b.type === 'power' ? CONFIG.powerStation.name : CONFIG.buildings[p.b.type].name;
+  S.budget += delta;
+  p.b = null;
+  logAction({ action: 'clear', plot: pid, district: DISTRICTS[p.d], building: name, cost: -delta,
+    note: delta >= 0 ? `Refund ${money(delta)}` : `Decommissioning cost ${money(-delta)}` });
+  afterChange();
+}
+function afterChange() {
+  checkTasks();
+  renderAll();
+}
+function setSpeed() {
+  if (!playing()) return;
+  const i = CONFIG.speeds.indexOf(S.speed);
+  S.speed = CONFIG.speeds[(i + 1) % CONFIG.speeds.length];
+  logAction({ action: 'speed', note: `Speed ${S.speed}×` });
+  renderHUD();
+}
+
+/* ==========================================================================
+   Rendering
+   ========================================================================== */
+function showScreen(name) {
+  ['intro', 'game', 'results'].forEach(n => $('screen-' + n).classList.toggle('hidden', n !== name));
+  window.scrollTo(0, 0);
+}
+let plotEls = [];
+function buildMap() {
+  const map = $('map');
+  map.innerHTML = DISTRICTS.map((n, d) => `<div class="district"><h3>${n}</h3><div class="plots" data-d="${d}"></div></div>`).join('');
+  plotEls = [];
+  for (const p of S.plots) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'plot';
+    el.addEventListener('click', () => onPlot(p.id));
+    map.querySelector(`.plots[data-d="${p.d}"]`).appendChild(el);
+    plotEls[p.id] = el;
+  }
+}
+function onPlot(pid) {
+  if (!playing()) return;
+  if (S.survey) { surveyTap(pid); return; }
+  if (S.overlay) return;
+  S.selected = S.selected === pid ? null : pid;
+  logAction({ action: 'select', plot: pid, district: DISTRICTS[S.plots[pid].d] });
+  renderMap();
+  renderPanel();
+  if (S.selected != null && window.innerWidth <= 900) $('panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function renderMap() {
+  for (const p of S.plots) {
+    const el = plotEls[p.id];
+    let cls = 'plot', html = '', label;
+    if (p.water) { cls += ' water'; label = 'Water'; el.disabled = !S.survey; }
+    else {
+      el.disabled = false;
+      if (p.b) {
+        const side = sideOf(p.b.type);
+        cls += ' ' + side;
+        html = svgIcon(p.b.type);
+        if (p.b.up) html += `<span class="badge ${side === 'live' ? 'smart' : 'green'}">${svgIcon(side === 'live' ? 'smart' : 'leaf')}</span>`;
+        const nm = p.b.type === 'power' ? CONFIG.powerStation.name : (p.b.up ? CONFIG.buildings[p.b.type].upgrade.name : CONFIG.buildings[p.b.type].name);
+        label = `${nm}, ${DISTRICTS[p.d]}`;
+      } else label = `Empty plot, ${DISTRICTS[p.d]}`;
+    }
+    if (S.selected === p.id) cls += ' sel';
+    if (el.classList.contains('flash')) cls += ' flash';
+    if (el.classList.contains('tapped')) cls += ' tapped';
+    el.className = cls;
+    el.innerHTML = html;
+    el.setAttribute('aria-label', label);
+  }
+  $('mapHint').textContent = S.survey ? 'Survey in progress: building is paused.' : 'Tap a plot to see what you can do there.';
+}
+function previewLine(pv, base) {
+  const dL = pv.L - base.L, dT = pv.T - base.T, dC = pv.CI - base.CI;
+  let s = `<span class="pv">Liveability ${signed(dL)}, Technology ${signed(dT)}, City Index <span class="${dC > 0 ? 'up' : ''}">${signed(dC)}</span></span>`;
+  if (pv.blackout && !base.blackout) s += '<span class="warnline">Would cause a power shortfall</span>';
+  return s;
+}
+function renderPanel() {
+  const panel = $('panel');
+  if (S.selected == null || S.survey) { panel.hidden = true; return; }
+  const p = S.plots[S.selected];
+  const base = current();
+  panel.hidden = false;
+  let body = '';
+  const head = (title) => `<div class="panel-head"><h2>${esc(title)}</h2><button class="close-x" type="button" id="panelClose" aria-label="Close">×</button></div>`;
+  if (p.water) {
+    body = head(`Water, ${DISTRICTS[p.d]}`) + '<p class="empty">You can\'t build on water.</p>';
+  } else if (!p.b) {
+    body = head(`Empty plot, ${DISTRICTS[p.d]}`) + '<div class="opts">' + BTYPES.map(type => {
+      const d = CONFIG.buildings[type], cost = costOf(type);
+      const pv = previewWith(ps => { ps[p.id].b = { type, up: false }; });
+      const power = d.supply ? `Adds ${d.supply} power` : d.demand ? `Uses ${d.demand} power` : 'Uses no power';
+      const money1 = [d.income ? `earns ${money(d.income)}/month` : '', d.upkeep ? `upkeep ${money(d.upkeep)}/month` : ''].filter(Boolean).join(', ');
+      return `<div class="opt"><span class="opt-icon ${d.side}">${svgIcon(type)}</span>
+        <div class="opt-body"><b>${d.name}</b>${esc(fxText(d.fx))}. ${power}${money1 ? '; ' + money1 : ''}.${d.note ? ' ' + esc(d.note) : ''}${previewLine(pv, base)}</div>
+        <button class="btn primary small" type="button" data-build="${type}" ${S.budget < cost ? 'disabled' : ''}>Build ${money(cost)}${cost !== d.cost ? ' (grant)' : ''}</button></div>`;
+    }).join('') + '</div>';
+  } else if (p.b.type === 'power') {
+    const P = CONFIG.powerStation;
+    const pv = previewWith(ps => { ps[p.id].b = null; });
+    body = head(`${P.name}, ${DISTRICTS[p.d]}`) +
+      `<p class="empty">Supplies ${P.supply} power${S.mods.powerFault ? ` (${P.supply - eventCfg.powerFault.supplyPenalty} while faulty)` : ''}. ${esc(fxText(P.fx))}. Upkeep ${money(P.upkeep)}/month.</p><div class="opts">` +
+      (S.mods.powerFault ? `<div class="opt"><span class="opt-icon power">${svgIcon('power')}</span><div class="opt-body"><b>Repair</b>Restores full output.</div>
+        <button class="btn primary small" type="button" data-act="repair" ${S.budget < eventCfg.powerFault.repairCost ? 'disabled' : ''}>Repair ${money(eventCfg.powerFault.repairCost)}</button></div>` : '') +
+      `<div class="opt"><span class="opt-icon power">${svgIcon('power')}</span><div class="opt-body"><b>Decommission</b>Removes its power and its pollution.${previewLine(pv, base)}</div>
+        <button class="btn quiet small" type="button" data-act="clear" ${S.budget < P.decommissionCost ? 'disabled' : ''}>Decommission ${money(P.decommissionCost)}</button></div></div>`;
+  } else {
+    const d = CONFIG.buildings[p.b.type], u = d.upgrade;
+    const nm = p.b.up ? u.name : d.name;
+    const refund = Math.round(((p.b.paid != null ? p.b.paid : d.cost) + (p.b.up ? u.cost : 0)) * CONFIG.refundShare);
+    const pvClear = previewWith(ps => { ps[p.id].b = null; });
+    body = head(`${nm}, ${DISTRICTS[p.d]}`) +
+      `<p class="empty">${esc(fxText(d.fx))}${p.b.up ? '; upgrade adds ' + esc(fxText(u.fx)) : ''}.${d.note ? ' ' + esc(d.note) : ''}</p><div class="opts">`;
+    if (!p.b.up) {
+      const pv = previewWith(ps => { ps[p.id].b.up = true; });
+      const verb = d.side === 'live' ? 'Add smart tech' : 'Green retrofit';
+      body += `<div class="opt"><span class="opt-icon ${d.side === 'live' ? 'tech' : 'live'}">${svgIcon(d.side === 'live' ? 'smart' : 'leaf')}</span>
+        <div class="opt-body"><b>${verb}: ${u.name}</b>${esc(fxText(u.fx))}.${u.demand ? ` Uses ${u.demand} more power.` : ''}${previewLine(pv, base)}</div>
+        <button class="btn primary small" type="button" data-act="upgrade" ${S.budget < u.cost ? 'disabled' : ''}>Upgrade ${money(u.cost)}</button></div>`;
+    }
+    body += `<div class="opt"><span class="opt-icon ${d.side}">${svgIcon(p.b.type)}</span><div class="opt-body"><b>Clear plot</b>Refunds ${money(refund)}.${previewLine(pvClear, base)}</div>
+      <button class="btn quiet small" type="button" data-act="clear">Clear</button></div></div>`;
+  }
+  panel.innerHTML = body;
+  const close = $('panelClose');
+  if (close) close.addEventListener('click', () => { S.selected = null; renderMap(); renderPanel(); });
+  panel.querySelectorAll('[data-build]').forEach(b => b.addEventListener('click', () => build(p.id, b.dataset.build)));
+  panel.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+    const a = b.dataset.act;
+    if (a === 'upgrade') upgrade(p.id);
+    else if (a === 'clear') clearPlot(p.id);
+    else if (a === 'repair') repairPower();
+  }));
+}
+function renderHUD() {
+  const c = current();
+  $('hudDate').textContent = `Year ${Math.floor((S.month - 1) / 12) + 1}, month ${((S.month - 1) % 12) + 1}`;
+  $('hudBudget').textContent = money(S.budget);
+  $('hudBudgetWrap').classList.toggle('warn', S.budget < 0);
+  $('hudPower').textContent = `${c.demand} / ${c.supply}`;
+  $('hudPowerWrap').classList.toggle('warn', c.blackout);
+  $('hudApproval').textContent = Math.round(S.approval);
+  $('speedBtn').textContent = `Speed ${S.speed}×`;
+}
+function renderTimers() {
+  const t = mmss(CONFIG.timeLimitMs - S.elapsed);
+  if ($('hudTime').textContent !== t) $('hudTime').textContent = t;
+  $('monthBar').style.width = (S.monthAcc / CONFIG.monthMs * 100) + '%';
+}
+function renderMetrics() {
+  const c = current();
+  $('barL').style.width = c.L + '%'; $('valL').textContent = Math.round(c.L);
+  $('barT').style.width = c.T + '%'; $('valT').textContent = Math.round(c.T);
+  $('valCI').textContent = Math.round(c.CI);
+  const tilt = clamp((c.L - c.T) * 0.6, -18, 18);   // heavier side drops
+  $('beam').setAttribute('transform', `rotate(${-tilt} 60 28)`);
+  $('balanceText').textContent = c.gap <= CONFIG.balancedGap ? 'City Index: balanced'
+    : c.L > c.T ? 'City Index: leaning liveability' : 'City Index: leaning technology';
+  $('subs').innerHTML = LIVE.map((k, i) => [k, TECH[i]]).flat().map(k =>
+    `<div class="sub"><span>${SUB_LABEL[k]}</span><b>${Math.round(c.sub[k])}</b><div class="bar ${LIVE.includes(k) ? 'live' : 'tech'}"><i style="width:${c.sub[k]}%"></i></div></div>`).join('');
+}
+function renderAlerts() {
+  const el = $('alerts');
+  const c = current();
+  const items = [];
+  if (c.blackout) items.push(`<div class="alert"><b>Power shortfall</b><p>The city uses ${c.demand} power but has ${c.supply}. Technology is reduced, health is lower and income drops until this is fixed.</p></div>`);
+  if (S.budget < 0) items.push(`<div class="alert"><b>In debt</b><p>Approval falls each month while the budget is below zero.</p></div>`);
+  for (const a of S.alerts) {
+    let action = '';
+    if (a.key === 'powerFault') action = `<div class="actions"><button class="btn primary small" type="button" data-alert="repair" ${S.budget < eventCfg.powerFault.repairCost ? 'disabled' : ''}>Repair ${money(eventCfg.powerFault.repairCost)}</button></div>`;
+    if (a.key === 'breach') action = `<div class="actions"><button class="btn primary small" type="button" data-alert="fix" ${S.budget < eventCfg.breach.fixCost ? 'disabled' : ''}>Fund cyber security ${money(eventCfg.breach.fixCost)}</button></div>`;
+    let text = a.text;
+    if (a.key === 'grant') text += ` ${S.mods.grantUntil - S.month + 1} month(s) left.`;
+    items.push(`<div class="alert ${a.urgent ? '' : 'info'}"><b>${esc(a.title)}</b><p>${esc(text)}</p>${action}</div>`);
+  }
+  el.innerHTML = items.length ? items.join('') : '<p class="empty">Nothing needs your attention.</p>';
+  el.querySelectorAll('[data-alert]').forEach(b => b.addEventListener('click', () => (b.dataset.alert === 'repair' ? repairPower() : fixBreach())));
+}
+function renderTasks() {
+  const open = S.tasks.filter(t => t.status === 'open');
+  const el = $('tasks');
+  el.innerHTML = open.length ? open.map(t => {
+    const left = t.deadline - S.month + 1;
+    const reward = t.kind === 'survey' ? `Up to ${money(CONFIG.survey.rewardPerSpan * CONFIG.survey.maxSpan)}` : '+' + money(t.reward);
+    let extra = '', actions = '';
+    if (t.kind === 'call') {
+      extra = '<div class="done-items">Details hidden. ' + t.items.filter(i => i.done).length + ' of 2 parts done.</div>';
+      actions += `<button class="btn quiet small" type="button" data-replay="${t.id}" ${S.budget < CONFIG.briefing.replayCost ? 'disabled' : ''}>Replay call ${money(CONFIG.briefing.replayCost)}</button>`;
+    }
+    if (t.kind === 'survey') actions += `<button class="btn primary small" type="button" data-survey="${t.id}">Start survey</button>`;
+    if (t.kind === 'upgrade') extra = `<div class="done-items">${S.upgrades.length - t.upgAt} of ${t.count} done.</div>`;
+    actions += `<button class="btn quiet small" type="button" data-dismiss="${t.id}">Decline</button>`;
+    return `<div class="task"><div class="task-top"><b>${esc(t.title)}</b><span class="reward">${reward}</span></div>${extra}
+      <div class="meta"><span class="left ${left <= 2 ? 'soon' : ''}">${left} month${left === 1 ? '' : 's'} left</span><span>Approval −${t.penalty} if missed</span></div>
+      <div class="actions">${actions}</div></div>`;
+  }).join('') : '<p class="empty">No open requests.</p>';
+  el.querySelectorAll('[data-replay]').forEach(b => b.addEventListener('click', () => replayCall(b.dataset.replay)));
+  el.querySelectorAll('[data-survey]').forEach(b => b.addEventListener('click', () => startSurvey(b.dataset.survey)));
+  el.querySelectorAll('[data-dismiss]').forEach(b => b.addEventListener('click', () => dismissTask(b.dataset.dismiss)));
+  const closed = S.tasks.filter(t => t.status !== 'open');
+  $('historySummary').textContent = `Finished requests (${closed.length})`;
+  const word = { done: 'Done', missed: 'Missed', dismissed: 'Declined' };
+  $('taskHistory').innerHTML = closed.slice().reverse().map(t => `<div>${word[t.status]}: ${esc(t.title)}${t.status === 'done' ? ' (+' + money(t.earned || 0) + ')' : ''}</div>`).join('');
+}
+function renderAll() { renderHUD(); renderMetrics(); renderMap(); renderPanel(); renderAlerts(); renderTasks(); renderTimers(); }
+
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(S.toastTimer);
+  S.toastTimer = setTimeout(() => { t.hidden = true; }, 3800);
+}
+function floatAt(el, text) {
+  const r = el.getBoundingClientRect();
+  const f = document.createElement('div');
+  f.className = 'floater';
+  f.textContent = text;
+  f.style.left = (r.left + r.width / 2) + 'px';
+  f.style.top = r.top + 'px';
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 1050);
+}
+
+/* ==========================================================================
+   Finishing
+   ========================================================================== */
+function confirmFinish() {
+  if (!playing() || S.overlay || S.survey) return;
+  S.overlay = 'finish';
+  const c = current();
+  $('modal').innerHTML = `<h2>Finish City Grow now?</h2>
+    <p>You've used ${mmss(S.elapsed)} of 25:00. Liveability is ${Math.round(c.L)}, Technology is ${Math.round(c.T)} and your City Index is ${Math.round(c.CI)}.</p>
+    <p style="color:var(--muted)">You can't return to the city after finishing.</p>
+    <div class="row"><button class="btn quiet small" type="button" id="keepBtn">Keep playing</button><button class="btn primary small" type="button" id="doneBtn">Finish</button></div>`;
+  $('overlay').hidden = false;
+  logAction({ action: 'finish-considered' });
+  $('keepBtn').addEventListener('click', () => { S.overlay = null; $('overlay').hidden = true; logAction({ action: 'finish-cancelled' }); });
+  $('doneBtn').addEventListener('click', () => { S.overlay = null; $('overlay').hidden = true; finishGame('player'); });
+  $('keepBtn').focus();
+}
+function finishGame(by) {
+  if (!playing()) return;
+  cancelAnimationFrame(S.raf);
+  clearTimeout(S.briefTimer);
+  if (S.survey) { S.survey = null; banner(null); }
+  S.overlay = null;
+  $('overlay').hidden = true;
+  S.finishedBy = by;
+  snapshot();
+  logAction({ action: 'finish', note: by === 'time' ? 'Time limit reached' : 'Player chose to finish' });
+  S.phase = 'results';
+  showResults();
+}
+
+/* ==========================================================================
+   Scoring. Reads the action log, monthly history and task records.
+   ========================================================================== */
+function analyse() {
+  const SC = CONFIG.scoring, H = S.history, last = H[H.length - 1], lastMonth = last.month;
+  const pl = (n, w, p) => `${n} ${n === 1 ? w : (p || w + 's')}`;
+  const pc = x => Math.round(x * 100) + '%';
+  const ind = (name, score, desc, tips, tipOverride) => {
+    const b = band(score);
+    return { name, score, band: b, desc, tip: tipOverride || (b ? tips[b] : null) };
+  };
+
+  /* ---------- Dynamic decision-making ---------- */
+  const E = SC.events, info = S.eventInfo;
+  const fired = k => info[k] && !info[k].skipped;
+  const latency = (k, resolved) => (resolved != null ? resolved - info[k].month : (lastMonth - info[k].month) + E.unresolvedExtra);
+
+  // Responding to events: power fault, population surge, data breach.
+  const evParts = [], evText = [];
+  if (fired('powerFault')) {
+    const m0 = info.powerFault.month;
+    const months = H.filter(h => h.month >= m0 && h.month <= m0 + 12 && h.blackout).length;
+    evParts.push(scale(months, E.powerBlackoutBest, E.powerBlackoutWorst));
+    evText.push(months ? `the power fault left the city short of power for ${pl(months, 'month')}` : 'the power fault never left the city short of power');
+  }
+  if (fired('surge')) {
+    const m0 = info.surge.month, h0 = info.surge.housingBefore;
+    const rec = H.find(h => h.month >= m0 && h.sub.housing >= h0);
+    const lat = latency('surge', rec ? rec.month : null);
+    evParts.push(scale(lat, E.surgeBest, E.surgeWorst));
+    evText.push(rec ? (lat ? `housing recovered from the population surge in ${pl(lat, 'month')}` : 'housing stayed at its earlier level despite the population surge') : 'housing hadn\'t recovered from the population surge by the end');
+  }
+  if (fired('breach')) {
+    const lat = latency('breach', info.breach.resolvedMonth);
+    evParts.push(scale(lat, E.breachBest, E.breachWorst));
+    evText.push(info.breach.resolvedMonth != null ? (lat ? `you fixed the data breach after ${pl(lat, 'month')}` : 'you fixed the data breach straight away') : 'the data breach was never fixed');
+  }
+  const responding = ind('Responding to events', evParts.length ? Math.round(mean(evParts)) : null,
+    evParts.length ? evText.map(t => cap1(t) + '.').join(' ') : 'No disruptive events had happened by the time you finished.',
+    { Low: 'When an alert appears, work out what it costs you each month and deal with the most damaging one first.',
+      Developing: 'Respond to lasting problems (power, breaches, housing) within a month or two, before they drag on your index.',
+      Strong: 'You dealt with disruptions quickly. Keep checking whether each fix was worth what it cost.' });
+
+  // Adapting to rule changes: carbon rules and grant window.
+  const adParts = [], adText = [];
+  if (fired('carbon')) {
+    const m0 = info.carbon.month, chk = Math.min(lastMonth, m0 + E.carbonCheckMonths);
+    const atChk = H.find(h => h.month === chk) || last;
+    const newDirty = S.builds.filter(b => b.type === 'factory' && b.month >= m0).length;
+    const score = clamp(100 - E.carbonDirtyPenalty * atChk.dirtyFactories - E.carbonNewPenalty * newDirty, 0, 100);
+    adParts.push(score);
+    adText.push(info.carbon.dirtyAtStart || newDirty
+      ? `after the carbon rules arrived you built ${pl(newDirty, 'new factory', 'new factories')}, and ${pl(atChk.dirtyFactories, 'factory', 'factories')} still lacked a clean retrofit ${chk - m0} months later`
+      : 'you had no robot factories when the carbon rules arrived and built none afterwards');
+  }
+  if (fired('grant')) {
+    const m0 = info.grant.month, end = m0 + eventCfg.grant.months - 1;
+    const used = S.builds.filter(b => b.side === 'tech' && b.month >= m0 && b.month <= end).length;
+    const lead = info.grant.T - info.grant.L;   // positive = tech ahead
+    let score;
+    if (-lead > E.grantBehindGap) score = used >= 2 ? 100 : used === 1 ? 65 : 25;
+    else if (lead > E.grantAheadGap) score = used >= 2 ? 50 : 90;
+    else score = used >= 1 ? 100 : 75;
+    adParts.push(score);
+    adText.push(`during the half-price tech grant you built ${pl(used, 'tech building')} (Technology was ${Math.round(lead) < 0 ? pl(Math.round(-lead), 'point') + ' behind' : Math.round(lead) > 0 ? pl(Math.round(lead), 'point') + ' ahead of' : 'level with'} Liveability at the time)`);
+  }
+  const adapting = ind('Adapting to rule changes', adParts.length ? Math.round(mean(adParts)) : null,
+    adParts.length ? adText.map(t => cap1(t) + '.').join(' ') : 'No rule changes had happened by the time you finished.',
+    { Low: 'When the rules change, re-check your plan: stop building what just became expensive and use any new opportunity that fits your gaps.',
+      Developing: 'React to rule changes within a few months, for example by retrofitting factories or using a grant where your city is behind.',
+      Strong: 'You changed course when the rules changed. Keep weighing each opportunity against where your city is weakest.' });
+
+  // Balancing outcomes
+  const B = SC.balancing;
+  const later = H.filter(h => h.month >= B.fromMonth);
+  const share = later.length ? later.filter(h => h.gap <= B.gap).length / later.length : null;
+  const balScore = weightedMean([[scale(last.CI, B.ciBest, B.ciWorst), B.weightCI], [scale(share, B.shareBest, B.shareWorst), B.weightShare]]);
+  const balancing = ind('Balancing outcomes', balScore,
+    `You finished with Liveability ${Math.round(last.L)}, Technology ${Math.round(last.T)} and a City Index of ${Math.round(last.CI)}` +
+      (share != null ? `, and kept the two within ${B.gap} points of each other for ${pc(share)} of months after month ${B.fromMonth}.` : '.'),
+    { Low: 'Check the balance beam often. When one side pulls ahead, use upgrades to lift the other side.',
+      Developing: 'Use upgrades as balancing tools: smart tech on liveability buildings, green retrofits on tech buildings.',
+      Strong: 'You grew both sides together. Push the weaker of your eight sub-measures to raise the index further.' });
+
+  // Budget control
+  const BC = SC.budget;
+  const debtMonths = H.filter(h => h.debt).length;
+  const weak = H.filter(h => h.month >= BC.fromMonth && h.CI < BC.weakCI);
+  const idle = weak.length ? mean(weak.map(h => Math.max(0, h.budget))) : null;
+  const budgetScore = weightedMean([[scale(debtMonths, BC.debtBest, BC.debtWorst), BC.weightDebt], [idle == null ? null : scale(idle, BC.idleBest, BC.idleWorst), BC.weightIdle]]);
+  const budget = ind('Budget control', budgetScore,
+    `You spent ${pl(debtMonths, 'month')} in debt` + (idle != null ? `, and while your City Index was below ${BC.weakCI} you held ${money(idle)} unspent on average.` : '.'),
+    { Low: 'Keep a small buffer for upkeep, but put spare money to work quickly while your city still has gaps.',
+      Developing: 'Aim to spend steadily: avoid both debt and large unused balances.',
+      Strong: 'You kept your budget working without running into debt.' });
+
+  // Knowing when to finish
+  const F = SC.finishing;
+  let finScore, finDesc;
+  if (S.finishedBy === 'player') {
+    const good = last.CI >= F.goodCI && last.gap <= F.goodGap;
+    finScore = good ? F.earlyGood : last.CI >= F.okCI ? F.earlyOk : F.earlyWeak;
+    finDesc = `You chose to finish after ${mmss(last.ms)} with a City Index of ${Math.round(last.CI)}` +
+      (good ? ', a strong and balanced position.' : last.CI >= F.okCI ? ', a reasonable position with room to improve.' : ', before the city had reached a strong position.');
+  } else {
+    const ref = H.slice().reverse().find(h => h.ms <= last.ms - F.improveWindowMs);
+    const gain = ref ? last.CI - ref.CI : null;
+    finScore = gain != null && gain >= F.improveBy ? F.limitImproving : F.limitFlat;
+    finDesc = `You played to the 25-minute limit. Your City Index ${gain == null ? 'was' : gain >= F.improveBy ? `rose by ${Math.round(gain)} in the last five minutes` : 'changed little in the last five minutes'}${gain == null ? ' ' + Math.round(last.CI) : ''}.`;
+  }
+  const finishing = ind('Knowing when to finish', finScore, finDesc,
+    { Low: 'Before finishing, check the balance beam and your weakest sub-measures; a few more months can make a big difference.',
+      Developing: 'Set yourself a target (for example, both sides above 60 and balanced) and finish once you reach it.',
+      Strong: 'You judged well when your city was in a good place.' });
+
+  /* ---------- Working memory ---------- */
+  const trials = S.log.filter(e => e.action === 'survey-trial');
+  const Q = SC.sequence;
+  let seqInd;
+  if (!trials.length) seqInd = ind('Sequence memory', null, 'You didn\'t complete a drone survey, so this wasn\'t measured.', {});
+  else {
+    const maxSpan = Math.max(0, ...trials.filter(t => t.correct).map(t => t.span));
+    const acc = trials.filter(t => t.correct).length / trials.length;
+    const score = weightedMean([[scale(maxSpan, Q.spanBest, Q.spanWorst), Q.weightSpan], [scale(acc, Q.accBest, Q.accWorst), Q.weightAcc]]);
+    seqInd = ind('Sequence memory', score,
+      `In the drone surveys you correctly recalled sequences of up to ${maxSpan || 'no'} plots, and got ${trials.filter(t => t.correct).length} of ${trials.length} sequences right.`,
+      { Low: 'Try grouping the plots into a path or shape as they flash, rather than remembering each one separately.',
+        Developing: 'Say the order to yourself by district as the plots flash, for example "Old Town, Harbour, Harbour".',
+        Strong: 'You held long sequences accurately. Keep using whatever grouping strategy worked for you.' });
+  }
+  const BR = SC.briefings;
+  const calls = S.tasks.filter(t => t.kind === 'call' && (t.status !== 'open' || lastMonth - t.createdMonth >= BR.minMonthsOpen));
+  let briefInd;
+  if (!calls.length) briefInd = ind('Remembering briefings', null, 'No mayor\'s call had run long enough to measure this.', {});
+  else {
+    const items = calls.flatMap(t => t.items), done = items.filter(i => i.done).length;
+    const replays = calls.reduce((s, t) => s + t.replays, 0);
+    const score = clamp(scale(done / items.length, BR.best, BR.worst) - replays * BR.replayPenalty, 0, 100);
+    briefInd = ind('Remembering briefings', score,
+      `Across ${pl(calls.length, 'mayor\'s call')} you completed ${done} of ${items.length} remembered instructions (building and district), and replayed a call ${pl(replays, 'time')}.`,
+      { Low: 'When a briefing appears, link each item to something on the map, such as "clinic, Hillside, next to the park".',
+        Developing: 'Act on a briefing soon after you hear it, before other requests crowd it out.',
+        Strong: 'You remembered the details of briefings after they disappeared.' });
+  }
+
+  /* ---------- Task prioritisation ---------- */
+  const resolved = S.tasks.filter(t => t.status !== 'open');
+  const valOf = t => (t.kind === 'survey' ? CONFIG.tasks.kinds.survey.nominalValue : t.reward);
+  let valueInd, deadlineInd, orderInd;
+  if (!resolved.length) {
+    valueInd = ind('Value captured', null, 'No requests had finished, so this wasn\'t measured.', {});
+    deadlineInd = ind('Meeting deadlines', null, 'No requests had finished, so this wasn\'t measured.', {});
+  } else {
+    const total = resolved.reduce((s, t) => s + valOf(t), 0);
+    const got = resolved.filter(t => t.status === 'done').reduce((s, t) => s + valOf(t), 0);
+    const frac = total ? got / total : 0;
+    valueInd = ind('Value captured', scale(frac, SC.value.best, SC.value.worst),
+      `You completed requests worth ${pc(frac)} of the value on offer (${resolved.filter(t => t.status === 'done').length} of ${resolved.length} finished requests).`,
+      { Low: 'Compare requests by reward and deadline, and focus on the ones that pay most for least effort.',
+        Developing: 'Look for builds that complete two requests at once, or that a request and your own plan both need.',
+        Strong: 'You captured most of the value on offer.' });
+    const missed = resolved.filter(t => t.status === 'missed').length, dismissed = resolved.filter(t => t.status === 'dismissed').length;
+    const rate = (missed + SC.deadlines.dismissWeight * dismissed) / resolved.length;
+    deadlineInd = ind('Meeting deadlines', scale(rate, SC.deadlines.best, SC.deadlines.worst),
+      `You missed ${pl(missed, 'deadline')} and declined ${pl(dismissed, 'request')} out of ${resolved.length} finished requests.`,
+      { Low: 'Scan the months-left labels every few months and act on anything with two months or fewer.',
+        Developing: 'If you can\'t realistically meet a request, decline it early: it costs less approval than missing it.',
+        Strong: 'You met your deadlines reliably.' });
+  }
+  const completions = S.log.filter(e => e.action === 'task-done' && e.openOthers);
+  if (!completions.length) orderInd = ind('Choosing what to do first', null, 'You didn\'t complete enough requests for this to be measured.', {});
+  else {
+    const status = id => (S.tasks.find(t => t.id === id) || {}).status;
+    const inversions = completions.filter(e => e.openOthers.some(o => o.urgency > e.urgency * SC.ordering.urgencyRatio && status(o.id) === 'missed')).length;
+    const rate = inversions / completions.length;
+    orderInd = ind('Choosing what to do first', scale(rate, SC.ordering.best, SC.ordering.worst),
+      `${pl(inversions, 'time')} out of ${completions.length}, you finished a less pressing request while a more valuable, more urgent one was left to expire.`,
+      { Low: 'Before acting, rank open requests by value and months left. Do the most valuable, most urgent one first.',
+        Developing: 'When two requests compete, check which one expires sooner and what missing it would cost.',
+        Strong: 'You tackled the most pressing requests first.' });
+  }
+  const crisis = H.filter(h => h.blackout || h.debt).length;
+  const urgentInd = ind('Handling urgent problems', scale(crisis, SC.urgent.best, SC.urgent.worst),
+    crisis ? `Your city spent ${pl(crisis, 'month')} with a power shortfall or in debt.` : 'Your city never had a power shortfall or went into debt.',
+    { Low: 'Treat power shortfalls and debt as top priority: they reduce income and your index every month they last.',
+      Developing: 'Keep some spare power and a small cash buffer so a single event doesn\'t tip you into a crisis.',
+      Strong: 'You kept the city out of power shortfalls and debt, or fixed them quickly.' });
+
+  const headline = inds => {
+    const vals = inds.map(i => i.score).filter(v => v != null);
+    const score = vals.length ? Math.round(mean(vals)) : null;
+    return { score, band: band(score), indicators: inds };
+  };
+  return {
+    ddm: headline([responding, adapting, balancing, budget, finishing]),
+    wm: headline([seqInd, briefInd]),
+    tp: headline([valueInd, deadlineInd, orderInd, urgentInd]),
+    last
+  };
+}
+function joinAnd(a) { return a.length <= 1 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+function cap1(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/* ==========================================================================
+   Results screen
+   ========================================================================== */
+function chip(b, score) {
+  if (!b) return '<span class="chip na">Not measured</span>';
+  return `<span class="chip ${b}">${b}${score != null ? ` <small>${score}</small>` : ''}</span>`;
+}
+function areaHTML(title, intro, h) {
+  const inds = h.indicators.map(i => `
+    <div class="ind"><div class="ind-head"><h3>${esc(i.name)}</h3>${chip(i.band, i.score)}</div>
+      <p>${esc(i.desc)}</p>${i.tip ? `<p class="tip"><b>Tip:</b> ${esc(i.tip)}</p>` : ''}</div>`).join('');
+  return `<section class="area"><div class="area-head"><h2>${esc(title)}</h2>${chip(h.band, h.score)}</div>
+    <p class="area-intro">${esc(intro)}</p>${inds}</section>`;
+}
+function logTableHTML() {
+  const rows = S.log.map(e => `<tr class="${e.action === 'month' || e.action === 'system' || e.action === 'select' ? 'sys' : ''}">
+    <td>${e.seq}</td><td>${mmss(e.t)}</td><td>${e.month}</td><td>${esc(e.action)}</td><td>${esc(e.building || '')}</td>
+    <td>${esc(e.district || '')}</td><td>${e.cost ? money(e.cost) : ''}</td><td>${money(e.budget)}</td>
+    <td>${Math.round(e.L)}</td><td>${Math.round(e.T)}</td><td>${Math.round(e.CI)}</td><td>${esc(e.taskId || '')}</td><td>${esc(e.note || '')}</td></tr>`).join('');
+  return `<div class="table-wrap"><table><thead><tr><th>#</th><th>Time</th><th>Month</th><th>Action</th><th>Building</th><th>District</th>
+    <th>Cost</th><th>Budget</th><th>L</th><th>T</th><th>CI</th><th>Request</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function showResults() {
+  const R = analyse(), last = R.last;
+  const done = S.tasks.filter(t => t.status === 'done').length;
+  const mini = S.plots.map(p => {
+    if (p.water) return '<span class="water"></span>';
+    if (!p.b) return '<span></span>';
+    return `<span class="${sideOf(p.b.type)}">${svgIcon(p.b.type)}</span>`;
+  }).join('');
+  $('resultsWrap').innerHTML = `
+    <h1>Your City Grow results</h1>
+    <p class="summary">${S.finishedBy === 'time' ? 'You played to the 25-minute limit' : `You finished after ${mmss(last.ms)}`}, reached year ${Math.floor((last.month - 1) / 12) + 1}, and completed ${done} of ${S.tasks.length} council requests.</p>
+    <div class="stat-grid">
+      <div class="stat live"><small>Liveability</small><b>${Math.round(last.L)}</b></div>
+      <div class="stat tech"><small>Technology</small><b>${Math.round(last.T)}</b></div>
+      <div class="stat"><small>Gap between them</small><b>${Math.round(last.gap)}</b></div>
+      <div class="stat"><small>City Index</small><b>${Math.round(last.CI)}</b></div>
+    </div>
+    <div class="mini-map" aria-hidden="true">${mini}</div>
+    <div class="notice">
+      <p>This is an unvalidated practice tool. City Grow and MindSphere Analytics are fictional, and these bands don't predict how you'd do in a real assessment.</p>
+      <p>Real game-based assessments build a behavioural profile. There's no pass or fail, and no single "correct" way to play: different styles suit different roles.</p>
+    </div>
+    ${areaHTML('Dynamic decision-making', 'How you responded to events and rule changes, balanced the city, managed money and judged when to stop.', R.ddm)}
+    ${areaHTML('Working memory', 'How well you held information in mind after it was no longer on screen.', R.wm)}
+    ${areaHTML('Task prioritisation', 'How you chose between competing requests and urgent problems.', R.tp)}
+    <details class="log"><summary>Show my action log</summary>
+      <div class="log-tools"><button class="btn quiet" type="button" id="copyLog">Copy log as JSON</button><span id="copyStatus"></span></div>
+      ${logTableHTML()}</details>
+    <div class="results-actions"><button class="btn primary" type="button" id="againBtn">Play again</button></div>`;
+  showScreen('results');
+  $('againBtn').addEventListener('click', () => { S.phase = 'intro'; showScreen('intro'); });
+  $('copyLog').addEventListener('click', () => copyText(JSON.stringify({ log: S.log, history: S.history, tasks: S.tasks }, null, 2)));
+}
+function copyText(text) {
+  const done = ok => { $('copyStatus').textContent = ok ? 'Copied.' : 'Copy failed. Select the table instead.'; };
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove(); done(ok);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => done(true), fallback);
+  else fallback();
+}
+
+/* ==========================================================================
+   Wiring
+   ========================================================================== */
+$('startBtn').addEventListener('click', startGame);
+$('speedBtn').addEventListener('click', setSpeed);
+$('finishBtn').addEventListener('click', confirmFinish);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && playing() && S.selected != null && !S.overlay) { S.selected = null; renderMap(); renderPanel(); }
+});
+</script>
+</body>
+</html>
